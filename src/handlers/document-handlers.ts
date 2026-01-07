@@ -213,9 +213,57 @@ export async function handleDeleteDocument(args: any) {
   const response = await client.deleteDocument(id);
 
   let responseText = `Document ${id} deleted successfully!`;
-  
+
   if (response.messages && response.messages.length > 0) {
     responseText += '\n\nMessages:\n' + response.messages.map(msg => `${msg.type.toUpperCase()}: ${msg.content}`).join('\n');
+  }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: responseText,
+      },
+    ],
+  };
+}
+
+export async function handleBulkDelete(args: any) {
+  const client = initializeClient();
+  const { ids } = args as { ids: string[] };
+
+  const results: { id: string; success: boolean; error?: string }[] = [];
+
+  // Process deletions concurrently with a concurrency limit to avoid overwhelming the API
+  const CONCURRENCY_LIMIT = 5;
+  for (let i = 0; i < ids.length; i += CONCURRENCY_LIMIT) {
+    const batch = ids.slice(i, i + CONCURRENCY_LIMIT);
+    const batchResults = await Promise.allSettled(
+      batch.map(async (id) => {
+        await client.deleteDocument(id);
+        return id;
+      })
+    );
+
+    for (let j = 0; j < batchResults.length; j++) {
+      const result = batchResults[j];
+      const id = batch[j];
+      if (result.status === 'fulfilled') {
+        results.push({ id, success: true });
+      } else {
+        results.push({ id, success: false, error: result.reason?.message || 'Unknown error' });
+      }
+    }
+  }
+
+  const successful = results.filter(r => r.success);
+  const failed = results.filter(r => !r.success);
+
+  let responseText = `Bulk delete completed.\n\nSuccessfully deleted: ${successful.length}/${ids.length} documents`;
+
+  if (failed.length > 0) {
+    responseText += `\n\nFailed to delete ${failed.length} documents:\n`;
+    responseText += failed.map(f => `- ${f.id}: ${f.error}`).join('\n');
   }
 
   return {

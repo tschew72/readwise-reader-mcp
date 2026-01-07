@@ -144,6 +144,23 @@ export const tools: Tool[] = [
     },
   },
   {
+    name: 'readwise_bulk_delete',
+    description: 'Delete multiple documents from Readwise Reader at once',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of document IDs to delete',
+          minItems: 1,
+        },
+      },
+      required: ['ids'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'readwise_list_tags',
     description: 'List all tags from Readwise Reader',
     inputSchema: {
