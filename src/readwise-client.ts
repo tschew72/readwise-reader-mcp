@@ -40,9 +40,14 @@ export class ReadwiseClient {
         const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
         throw new Error(`RATE_LIMIT:${retryAfterSeconds}`);
       }
-      
+
       const errorText = await response.text();
       throw new Error(`Readwise API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    // Handle 204 No Content responses (e.g., DELETE requests)
+    if (response.status === 204) {
+      return undefined as T;
     }
 
     return response.json();
